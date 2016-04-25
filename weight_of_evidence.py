@@ -9,6 +9,9 @@ maybe I'll rewrite this in future
 def weight_of_evidence_cv(col, target, cv=None):
     if cv is None:
         cv = [([x for x in range(len(target))], [x for x in range(len(target))])]
+    if type(cv) == int:
+        from sklearn.cross_validation import StratifiedKFold
+        cv = StratifiedKFold(target, cv)
     res = np.zeros(col.shape)
     for train, test in cv:
         Xtrain, Xtest = col.iloc[train], col.iloc[test]
@@ -17,8 +20,7 @@ def weight_of_evidence_cv(col, target, cv=None):
     return res
 
 def weight_of_evidence(train_col, test_col, target):
-    mean = target.sum() / len(target)
-    woe = dict()
+    mean = target.mean()
     df = pd.DataFrame()
     df['v'] = train_col
     df['t'] = target
