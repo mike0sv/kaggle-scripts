@@ -1,57 +1,39 @@
-from __future__ import division
-import pandas as pd, numy as np
+from __future__ import division, print_function
+import pandas as pd, numpy as np
 """
 don't think this is actually what I intened to do
 but I used this for BNP Paribas contest
 and I gained some score)
 maybe I'll rewrite this in future
 """
-
-def woe_oof(col, target, cv=None):
+def weight_of_evidence_cv(col, target, cv=None):
     if cv is None:
         cv = [([x for x in range(len(target))], [x for x in range(len(target))])]
     res = np.zeros(col.shape)
-    values = col.unique()
     for train, test in cv:
         Xtrain, Xtest = col.iloc[train], col.iloc[test]
-        Ytrain, Ytest = target.iloc[train], target.iloc[test]
-        mean = Ytrain.sum() / len(Ytrain)
-        print mean
-        woe = dict()
-        for val in values:
-            try:
-                good = Ytrain[Xtrain == val].sum()
-                total = Xtrain.value_counts()[val]
-                woe[val] =  (total - good) / good
-                #print val, total
-            except:
-                print val, good, total,
-                woe[val] = np.nan
-        res[test] = Xtest.apply(lambda x: np.log(woe[x] / mean))
+        Ytrain, _ = target.iloc[train], target.iloc[test]
+        _, res[test] = weight_of_evidence(Xtrain, Xtest, Ytrain)
     return res
 
-def woe(train_col, test_col, target):
-    res_train, res_test = np.zeros(train_col.shape), np.zeros(test_col.shape)
-    values = train_col.unique()
+def weight_of_evidence(train_col, test_col, target):
     mean = target.sum() / len(target)
-    print mean
     woe = dict()
-    for val in values:
-        try:
-            good = target[train_col == val].sum()
-            total = train_col.value_counts()[val]
-            woe[val] =  (total - good) / good
-            #print val, total
-        except:
-            print val, good, total,
-            woe[val] = np.nan
-            
-    def get_woe(woe, key):
-        try:
-            return woe[key]
-        except:
-            return np.nan
-        
-    res_train = train_col.apply(lambda x: np.log(woe[x] / mean))
-    res_test = test_col.apply(lambda x: np.log(get_woe(woe, x) / mean))
-    return res_train, res_test
+    df = pd.DataFrame()
+    df['v'] = train_col
+    df['t'] = target
+    good = df.groupby('v')['t'].sum()
+    total = df.v.value_counts()
+    woe = np.log(((total - good) / good) / mean)
+
+    return train_col.apply(lambda x: woe[x] if x in woe.index else np.nan), \
+           test_col.apply(lambda x: woe[x] if x in woe.index else np.nan)
+
+def test():
+    a = pd.Series(['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c'])
+    c = pd.Series(['a', 'b', 'c'])
+    b = pd.Series([1, 1, 0, 1, 0, 0, 1, 0])
+    print(weight_of_evidence_cv(a, b))
+
+if __name__ == '__main__':
+    test()
